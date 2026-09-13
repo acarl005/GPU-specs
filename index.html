@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPU Spec Sheet — NVIDIA vs AMD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090c11;
+    --bg-alt: #0d1117;
+    --panel: #11161d;
+    --panel-border: #212936;
+    --text: #e6edf3;
+    --text-dim: #8b96a5;
+    --text-faint: #5b6572;
+    --accent: #7ee63f;
+    --accent-rgb: 126, 230, 63;
+    --accent-2: #58c8ff;
+    --danger: #ff5c5c;
+    --radius: 14px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  body.vendor-amd {
+    --accent: #ff5b4f;
+    --accent-rgb: 255, 91, 79;
+    --accent-2: #ffa64f;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(600px circle at 15% -10%, rgba(var(--accent-rgb), 0.14), transparent 60%),
+      radial-gradient(700px circle at 110% 10%, rgba(88, 200, 255, 0.08), transparent 55%),
+      radial-gradient(900px circle at 50% 120%, rgba(var(--accent-rgb), 0.07), transparent 60%),
+      var(--bg);
+    transition: background 0.4s ease;
+  }
+
+  /* Disclaimer banner */
+  .disclaimer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    text-align: center;
+    background: linear-gradient(90deg, rgba(255,197,61,0.16), rgba(255,140,61,0.14));
+    border-bottom: 1px solid rgba(255, 197, 61, 0.35);
+    color: #ffd97a;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 10px 18px;
+    line-height: 1.5;
+  }
+  .disclaimer strong { color: #ffe9ad; font-weight: 700; }
+  .disclaimer .emoji { font-size: 15px; }
+
+  header.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 18px 28px;
+    background: rgba(9, 12, 17, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .brand .logo-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 14px 2px rgba(var(--accent-rgb), 0.7);
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+  }
+  .brand h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 19px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .brand .sub {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    margin-top: 1px;
+  }
+
+  .vendor-tabs {
+    display: flex;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    padding: 4px;
+    gap: 2px;
+  }
+  .vendor-tabs button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+  .vendor-tabs button.active {
+    color: #05130a;
+    background: var(--accent);
+  }
+  body.vendor-amd .vendor-tabs button.active { color: #240400; }
+  .vendor-tabs button:not(.active):hover { color: var(--text); }
+
+  .search-wrap { position: relative; }
+  .search-wrap input {
+    width: 260px;
+    max-width: 55vw;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    padding: 9px 14px 9px 34px;
+    border-radius: 999px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .search-wrap input:focus {
+    border-color: rgba(var(--accent-rgb), 0.6);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+  }
+  .search-wrap::before {
+    content: '⌕';
+    position: absolute;
+    left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint);
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  main { padding: 26px 28px 60px; max-width: 1500px; margin: 0 auto; }
+
+  .panel-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .panel-meta h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    margin: 0;
+    background: linear-gradient(90deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .panel-meta .count { color: var(--text-dim); font-size: 13px; }
+
+  .table-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    box-shadow: 0 20px 50px -25px rgba(0,0,0,0.6), 0 0 0 1px rgba(var(--accent-rgb), 0.04);
+    overflow: hidden;
+  }
+  .table-card.hidden { display: none; }
+
+  .table-scroll {
+    overflow: auto;
+    max-height: 72vh;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #151b24;
+    color: var(--text-dim);
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sorted { color: var(--accent); }
+  thead th .arrow { display: inline-block; margin-left: 5px; opacity: 0.7; font-size: 10px; }
+  thead th:first-child { position: sticky; left: 0; z-index: 6; }
+  tbody td:first-child {
+    position: sticky;
+    left: 0;
+    background: inherit;
+    font-weight: 600;
+    color: var(--text);
+  }
+  tbody tr {
+    background: var(--panel);
+    transition: background 0.12s ease;
+  }
+  tbody tr:nth-child(even) { background: #0d131b; }
+  tbody tr:hover { background: rgba(var(--accent-rgb), 0.08); }
+  tbody td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  tbody td.col-card, tbody td.col-arch { font-family: 'Inter', sans-serif; }
+  tbody td.col-arch {
+    color: var(--accent-2);
+    font-weight: 500;
+    font-size: 12.5px;
+  }
+  .no-results { padding: 40px; text-align: center; color: var(--text-faint); }
+
+  .uncertain {
+    border-bottom: 1px dashed var(--danger);
+    color: #ff9b9b !important;
+    cursor: help;
+  }
+
+  details.notes {
+    margin-top: 26px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 4px 20px;
+  }
+  details.notes summary {
+    cursor: pointer;
+    padding: 14px 0;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    list-style: none;
+  }
+  details.notes summary::-webkit-details-marker { display: none; }
+  details.notes summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+  }
+  details.notes[open] summary::before { transform: rotate(90deg); }
+  .notes-body { padding: 0 0 20px; color: var(--text-dim); font-size: 13.5px; line-height: 1.65; }
+  .notes-body h4 { color: var(--text); font-size: 13.5px; margin: 16px 0 6px; }
+  .notes-body ul { margin: 6px 0; padding-left: 20px; }
+  .notes-body li { margin-bottom: 8px; }
+  .notes-body code { background: #1b232f; padding: 1px 6px; border-radius: 5px; font-family: var(--mono); font-size: 12px; }
+  .notes-body table { width: 100%; margin: 10px 0; border-collapse: collapse; font-size: 12.5px; }
+  .notes-body table th, .notes-body table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--panel-border); }
+  .notes-body table th { color: var(--text-faint); font-weight: 600; }
+
+  footer {
+    max-width: 1500px;
+    margin: 30px auto 0;
+    padding: 0 28px 40px;
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.7;
+  }
+  footer a { color: var(--accent-2); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 700px) {
+    header.topbar { padding: 14px 16px; gap: 14px; }
+    main { padding: 18px 14px 40px; }
+    .search-wrap input { width: 100%; max-width: none; }
+  }
+</style>
+</head>
+<body class="vendor-nvidia">
+
+<div class="disclaimer">
+  <span class="emoji">⚠️</span>
+  <span><strong>AI-generated content:</strong> this page and all specs on it were compiled by an LLM (AI agent) from public sources, whitepapers, and cross-checked databases. Figures may contain errors, omissions, or outdated values — especially rows marked <span class="uncertain" title="Approximate or unverified value">~ / *</span>. Please verify anything mission-critical against official vendor documentation.</span>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo-dot"></span>
+    <div>
+      <h1>GPU Spec Sheet</h1>
+      <div class="sub">NVIDIA &amp; AMD · Kepler/GCN → Blackwell/RDNA4</div>
+    </div>
+  </div>
+  <div class="vendor-tabs" role="tablist">
+    <button class="tab active" data-vendor="nvidia" role="tab" aria-selected="true">NVIDIA</button>
+    <button class="tab" data-vendor="amd" role="tab" aria-selected="false">AMD</button>
+  </div>
+  <div class="search-wrap">
+    <input id="search" type="text" placeholder="Search cards, architectures…" autocomplete="off">
+  </div>
+</header>
+
+<main>
+  <div class="panel-meta">
+    <h2 id="panel-title">NVIDIA GPU Specifications</h2>
+    <span class="count" id="panel-count"></span>
+  </div>
+
+  <section class="table-card" id="table-card">
+    <div class="table-scroll">
+      <table id="gpu-table">
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="notes" id="notes">
+    <summary>Methodology &amp; notes</summary>
+    <div class="notes-body" id="notes-body"></div>
+  </details>
+</main>
+
+<footer>
+  Data compiled from vendor whitepapers, official spec/datasheet pages, ROCm hardware-specification docs, and cross-checked GPU databases.<br>
+  Click any column header to sort. This page has no backend — it's a static file, safe to host on GitHub Pages.
+</footer>
+
+<script>
+/* ============================= DATA ============================= */
+
+const NVIDIA_COLUMNS = [
+  { label: 'Year', type: 'num' },
+  { label: 'Card', type: 'str', cls: 'col-card' },
+  { label: 'Architecture', type: 'str', cls: 'col-arch' },
+  { label: 'CC', type: 'num' },
+  { label: 'CUDA Cores', type: 'num' },
+  { label: 'SMs', type: 'num' },
+  { label: 'Memory', type: 'str' },
+  { label: 'Max Threads/SM', type: 'num' },
+  { label: 'Max Blocks/SM', type: 'num' },
+  { label: 'Max Shared Mem/SM', type: 'num' },
+  { label: 'Peak FP32 TFLOPS', type: 'num' },
+  { label: 'Mem Bandwidth', type: 'num' },
+  { label: 'L2 Cache', type: 'num' },
+  { label: 'Mem Bus & Type', type: 'str' },
+  { label: 'TDP', type: 'num' },
+];
+
+const NVIDIA_DATA = [
+["2012","GTX 680","Kepler","3.0","1,536","8","2 GB","2,048","16","48 KB","3.25","192 GB/s","512 KB","256-bit GDDR5","195 W"],
+["2013","GTX 780","Kepler","3.5","2,304","12","3 GB","2,048","16","48 KB","4.16","288 GB/s","1.5 MB","384-bit GDDR5","250 W"],
+["2013","GTX 780 Ti","Kepler","3.5","2,880","15","3 GB","2,048","16","48 KB","5.35","336 GB/s","1.5 MB","384-bit GDDR5","250 W"],
+["2014","GTX Titan Black","Kepler","3.5","2,880","15","6 GB","2,048","16","48 KB","5.65","336 GB/s","1.5 MB","384-bit GDDR5","250 W"],
+["2014","GTX 970","Maxwell","5.2","1,664","13","4 GB","2,048","32","96 KB","3.92","196 GB/s","1.75 MB","224-bit GDDR5","145 W"],
+["2014","GTX 980","Maxwell","5.2","2,048","16","4 GB","2,048","32","96 KB","4.98","224 GB/s","2 MB","256-bit GDDR5","165 W"],
+["2015","GTX 980 Ti","Maxwell","5.2","2,816","22","6 GB","2,048","32","96 KB","6.06","336 GB/s","3 MB","384-bit GDDR5","250 W"],
+["2015","GTX Titan X","Maxwell","5.2","3,072","24","12 GB","2,048","32","96 KB","6.60","336 GB/s","3 MB","384-bit GDDR5","250 W"],
+["2016","Tesla P100","Pascal","6.0","3,584","56","16 GB HBM2","2,048","32","64 KB","~10.6","732 GB/s","4 MB","4096-bit HBM2","300 W"],
+["2016","GTX 1060","Pascal","6.1","1,152–1,280","9–10","3/6 GB","2,048","32","96 KB","4.37","192 GB/s","1.5 MB","192-bit GDDR5","120 W"],
+["2016","GTX 1070","Pascal","6.1","1,920","15","8 GB","2,048","32","96 KB","6.46","256 GB/s","2 MB","256-bit GDDR5","150 W"],
+["2017","GTX 1070 Ti","Pascal","6.1","2,432","19","8 GB","2,048","32","96 KB","8.19","256 GB/s","2 MB","256-bit GDDR5","180 W"],
+["2016","GTX 1080","Pascal","6.1","2,560","20","8 GB","2,048","32","96 KB","8.87","320 GB/s","2 MB","256-bit GDDR5X","180 W"],
+["2017","GTX 1080 Ti","Pascal","6.1","3,584","28","11 GB","2,048","32","96 KB","11.34","484 GB/s","2.75 MB","352-bit GDDR5X","250 W"],
+["2017","Tesla V100","Volta","7.0","5,120","80","16/32 GB HBM2","2,048","32","96 KB","14–15","900 GB/s","6 MB","4096-bit HBM2","300/350 W"],
+["2019","RTX 2060","Turing","7.5","1,920","30","6 GB","1,024","16","64 KB","6.45","336 GB/s","3 MB","192-bit GDDR6","160 W"],
+["2019","RTX 2060 Super","Turing","7.5","2,176","34","8 GB","1,024","16","64 KB","7.18","448 GB/s","4 MB","256-bit GDDR6","175 W"],
+["2018","RTX 2070","Turing","7.5","2,304","36","8 GB","1,024","16","64 KB","7.46","448 GB/s","4 MB","256-bit GDDR6","175 W"],
+["2019","RTX 2070 Super","Turing","7.5","2,560","40","8 GB","1,024","16","64 KB","9.06","448 GB/s","4 MB","256-bit GDDR6","215 W"],
+["2018","RTX 2080","Turing","7.5","2,944","46","8 GB","1,024","16","64 KB","10.07","448 GB/s","4 MB","256-bit GDDR6","215 W"],
+["2019","RTX 2080 Super","Turing","7.5","3,072","48","8 GB","1,024","16","64 KB","11.15","496 GB/s","4 MB","256-bit GDDR6","250 W"],
+["2018","RTX 2080 Ti","Turing","7.5","4,352","68","11 GB","1,024","16","64 KB","13.45","616 GB/s","5.5 MB","352-bit GDDR6","250 W"],
+["2020","A100","Ampere","8.0","6,912","108","40 GB HBM2 / 80 GB HBM2e","2,048","32","164 KB","19.5","1,555–2,039 GB/s","40 MB","5120-bit HBM2/HBM2e","250/300/400 W"],
+["2021","RTX 3060","Ampere","8.6","3,584","28","12 GB","1,536","16","100 KB","12.74","360 GB/s","3 MB","192-bit GDDR6","170 W"],
+["2020","RTX 3060 Ti","Ampere","8.6","4,864","38","8 GB","1,536","16","100 KB","16.20","448 GB/s","4 MB","256-bit GDDR6","200 W"],
+["2020","RTX 3070","Ampere","8.6","5,888","46","8 GB","1,536","16","100 KB","20.31","448 GB/s","4 MB","256-bit GDDR6","220 W"],
+["2021","RTX 3070 Ti","Ampere","8.6","6,144","48","8 GB","1,536","16","100 KB","21.75","608 GB/s","4 MB","256-bit GDDR6X","290 W"],
+["2020","RTX 3080 (10GB)","Ampere","8.6","8,704","68","10 GB","1,536","16","100 KB","29.77","760 GB/s","5 MB","320-bit GDDR6X","320 W"],
+["2021","RTX 3080 (12GB)","Ampere","8.6","8,960","70","12 GB","1,536","16","100 KB","30.65","912 GB/s","6 MB","384-bit GDDR6X","350 W"],
+["2021","RTX 3080 Ti","Ampere","8.6","10,240","80","12 GB","1,536","16","100 KB","34.10","912 GB/s","6 MB","384-bit GDDR6X","350 W"],
+["2020","RTX 3090","Ampere","8.6","10,496","82","24 GB","1,536","16","100 KB","35.58","936 GB/s","6 MB","384-bit GDDR6X","350 W"],
+["2022","RTX 3090 Ti","Ampere","8.6","10,752","84","24 GB","1,536","16","100 KB","40.00","1,008 GB/s","6 MB","384-bit GDDR6X","450 W"],
+["2023","RTX 4060","Ada Lovelace","8.9","3,072","24","8 GB","1,536","24","100 KB","15.11","272 GB/s","24 MB","128-bit GDDR6","115 W"],
+["2023","RTX 4060 Ti","Ada Lovelace","8.9","4,352","34","8/16 GB","1,536","24","100 KB","22.06","288 GB/s","32 MB","128-bit GDDR6","160 W"],
+["2023","RTX 4070","Ada Lovelace","8.9","5,888","46","12 GB","1,536","24","100 KB","29.15","504 GB/s","36 MB","192-bit GDDR6X","200 W"],
+["2024","RTX 4070 Super","Ada Lovelace","8.9","7,168","56","12 GB","1,536","24","100 KB","35.48","504 GB/s","48 MB","192-bit GDDR6X","220 W"],
+["2023","RTX 4070 Ti","Ada Lovelace","8.9","7,680","60","12 GB","1,536","24","100 KB","40.09","504 GB/s","48 MB","192-bit GDDR6X","285 W"],
+["2024","RTX 4070 Ti Super","Ada Lovelace","8.9","8,448","66","16 GB","1,536","24","100 KB","44.10","672 GB/s","48 MB","256-bit GDDR6X","285 W"],
+["2022","RTX 4080","Ada Lovelace","8.9","9,728","76","16 GB","1,536","24","100 KB","48.74","717 GB/s","64 MB","256-bit GDDR6X","320 W"],
+["2024","RTX 4080 Super","Ada Lovelace","8.9","10,240","80","16 GB","1,536","24","100 KB","52.22","736 GB/s","64 MB","256-bit GDDR6X","320 W"],
+["2022","RTX 4090","Ada Lovelace","8.9","16,384","128","24 GB","1,536","24","100 KB","82.58","1,008 GB/s","72 MB","384-bit GDDR6X","450 W"],
+["2022","H100 (SXM)","Hopper","9.0","16,896","132","80 GB HBM3","2,048","32","228 KB","67","3,350 GB/s","50 MB","5120-bit HBM3","700 W"],
+["2024/25","B200","Blackwell","10.0","~16,896–18,432*","~132–148*","180–192 GB HBM3e","2,048","32","228 KB","~62–90*","~4,100–8,000 GB/s*","~50–96 MB* (126 MB for GB200)","4096/8192-bit HBM3e*","1,000 W"],
+["2025","RTX 5060","Blackwell","12.0","3,840","30","8 GB","1,536","32","128 KB","19.18","448 GB/s","32 MB","128-bit GDDR7","145 W"],
+["2025","RTX 5060 Ti","Blackwell","12.0","4,608","36","8/16 GB","1,536","32","128 KB","23.70","448 GB/s","32 MB","128-bit GDDR7","180 W"],
+["2025","RTX 5070","Blackwell","12.0","6,144","48","12 GB","1,536","32","128 KB","30.87","672 GB/s","48 MB","192-bit GDDR7","250 W"],
+["2025","RTX 5070 Ti","Blackwell","12.0","8,960","70","16 GB","1,536","32","128 KB","43.95","896 GB/s","48 MB","256-bit GDDR7","300 W"],
+["2025","RTX 5080","Blackwell","12.0","10,752","84","16 GB","1,536","32","128 KB","56.29","960 GB/s","64 MB","256-bit GDDR7","360 W"],
+["2025","RTX 5090","Blackwell","12.0","21,760","170","32 GB","1,536","32","128 KB","104.75","1,792 GB/s","96 MB","512-bit GDDR7","575 W"]
+];
+
+const AMD_COLUMNS = [
+  { label: 'Year', type: 'num' },
+  { label: 'Card', type: 'str', cls: 'col-card' },
+  { label: 'Architecture', type: 'str', cls: 'col-arch' },
+  { label: 'gfx ISA', type: 'str' },
+  { label: 'Stream Processors', type: 'num' },
+  { label: 'Compute Units', type: 'num' },
+  { label: 'Memory', type: 'str' },
+  { label: 'Max Threads/CU', type: 'num' },
+  { label: 'LDS/CU', type: 'num' },
+  { label: 'Peak FP32 TFLOPS', type: 'num' },
+  { label: 'Mem Bandwidth', type: 'num' },
+  { label: 'L2 Cache (+Infinity Cache)', type: 'num' },
+  { label: 'Mem Bus & Type', type: 'str' },
+  { label: 'TDP', type: 'num' },
+];
+
+const AMD_DATA = [
+["2011","HD 7970","GCN 1","gfx600","2,048","32","3 GB","2,560","64 KB","3.79","264 GB/s","768 KB","384-bit GDDR5","250 W"],
+["2013","R9 290X","GCN 2","gfx702","2,816","44","4 GB","2,560","64 KB","5.6","320 GB/s","1 MB","512-bit GDDR5","290 W"],
+["2015","R9 Fury X","GCN 3","gfx803","4,096","64","4 GB HBM1","2,560","64 KB","8.6","512 GB/s","2 MB","4096-bit HBM1","275 W"],
+["2016","RX 480","GCN 4","gfx803","2,304","36","8 GB","2,560","64 KB","5.8","256 GB/s","2 MB","256-bit GDDR5","150 W"],
+["2017","RX 580","GCN 4","gfx803","2,304","36","8 GB","2,560","64 KB","6.17","256 GB/s","2 MB","256-bit GDDR5","185 W"],
+["2017","Vega 56","GCN 5","gfx900","3,584","56","8 GB HBM2","2,560","64 KB","10.5","410 GB/s","4 MB","2048-bit HBM2","210 W"],
+["2017","Vega 64","GCN 5","gfx900","4,096","64","8 GB HBM2","2,560","64 KB","12.66","484 GB/s","4 MB","2048-bit HBM2","295 W"],
+["2019","Radeon VII","GCN 5.1","gfx906","3,840","60","16 GB HBM2","2,560","64 KB","13.8","1,024 GB/s","4 MB","4096-bit HBM2","300 W"],
+["2020","Instinct MI100","CDNA 1","gfx908","7,680","120","32 GB HBM2","2,560","64 KB","23.1 (vector)","1.2 TB/s","8 MB","4096-bit HBM2","300 W"],
+["2019","RX 5700","RDNA 1","gfx1010","2,304","36","8 GB","1,280","128 KB/WGP","7.95","448 GB/s","4 MB","256-bit GDDR6","180 W"],
+["2019","RX 5700 XT","RDNA 1","gfx1010","2,560","40","8 GB","1,280","128 KB/WGP","9.75","448 GB/s","4 MB","256-bit GDDR6","225 W"],
+["2022","Instinct MI210","CDNA 2","gfx90a","6,656","104","64 GB HBM2e","2,048","64 KB","22.6 (vector)","1.6 TB/s","8 MB","4096-bit HBM2e","300 W"],
+["2021","Instinct MI250","CDNA 2","gfx90a","13,312","208","128 GB HBM2e","2,048","64 KB","45.3 (vector)","3.2 TB/s","16 MB","8192-bit HBM2e","500 W"],
+["2021","Instinct MI250X","CDNA 2","gfx90a","14,080","220","128 GB HBM2e","2,048","64 KB","47.9 (vector)","3.2 TB/s","16 MB","8192-bit HBM2e","560 W"],
+["2021","RX 6600","RDNA 2","gfx1032","1,792","28","8 GB","1,280","128 KB/WGP","8.93","224 GB/s","2 MB (+32 MB)","128-bit GDDR6","132 W"],
+["2021","RX 6600 XT","RDNA 2","gfx1032","2,048","32","8 GB","1,280","128 KB/WGP","10.6","256 GB/s","2 MB (+32 MB)","128-bit GDDR6","160 W"],
+["2021","RX 6700 XT","RDNA 2","gfx1031","2,560","40","12 GB","1,280","128 KB/WGP","13.2","384 GB/s","3 MB (+96 MB)","192-bit GDDR6","230 W"],
+["2020","RX 6800","RDNA 2","gfx1030","3,840","60","16 GB","1,280","128 KB/WGP","16.2","512 GB/s","4 MB (+128 MB)","256-bit GDDR6","250 W"],
+["2020","RX 6800 XT","RDNA 2","gfx1030","4,608","72","16 GB","1,280","128 KB/WGP","20.7","512 GB/s","4 MB (+128 MB)","256-bit GDDR6","300 W"],
+["2020","RX 6900 XT","RDNA 2","gfx1030","5,120","80","16 GB","1,280","128 KB/WGP","23.04","512 GB/s","4 MB (+128 MB)","256-bit GDDR6","300 W"],
+["2022","RX 6950 XT","RDNA 2","gfx1030","5,120","80","16 GB","1,280","128 KB/WGP","23.7","576 GB/s","4 MB (+128 MB)","256-bit GDDR6","335 W"],
+["2023","RX 7600","RDNA 3","gfx1102","2,048","32","8 GB","1,280","128 KB/WGP","21.75","288 GB/s","2 MB (+32 MB)","128-bit GDDR6","165 W"],
+["2023","RX 7700 XT","RDNA 3","gfx1101","3,456","54","12 GB","1,280","128 KB/WGP","35.2","432 GB/s","2 MB (+48 MB)","192-bit GDDR6","245 W"],
+["2023","RX 7800 XT","RDNA 3","gfx1101","3,840","60","16 GB","1,280","128 KB/WGP","37.3","624 GB/s","4 MB (+64 MB)","256-bit GDDR6","263 W"],
+["2023","RX 7900 GRE","RDNA 3","gfx1100","5,120","80","16 GB","1,280","128 KB/WGP","46.0","576 GB/s","6 MB (+64 MB)","256-bit GDDR6","260 W"],
+["2022","RX 7900 XT","RDNA 3","gfx1100","5,376","84","20 GB","1,280","128 KB/WGP","51.6","800 GB/s","6 MB (+80 MB)","320-bit GDDR6","315 W"],
+["2022","RX 7900 XTX","RDNA 3","gfx1100","6,144","96","24 GB","1,280","128 KB/WGP","61.4","960 GB/s","6 MB (+96 MB)","384-bit GDDR6","355 W"],
+["2023","Instinct MI300X","CDNA 3","gfx942","19,456","304","192 GB HBM3","2,048*","64 KB","163.4","5.3 TB/s","32 MB (+256 MB)","8192-bit HBM3","750 W"],
+["2025","RX 9060 XT","RDNA 4","gfx1200","2,048","32","8/16 GB","1,280","128 KB/WGP","25.6","320 GB/s","4 MB (+32 MB)","128-bit GDDR6","150/160 W"],
+["2025","RX 9070","RDNA 4","gfx1201","3,584","56","16 GB","1,280","128 KB/WGP","36.1","640 GB/s","8 MB (+64 MB)","256-bit GDDR6","220 W"],
+["2025","RX 9070 XT","RDNA 4","gfx1201","4,096","64","16 GB","1,280","128 KB/WGP","48.7","640 GB/s","8 MB (+64 MB)","256-bit GDDR6","304 W"]
+];
+
+const NVIDIA_NOTES = `
+  <ul>
+    <li><strong>Peak FP32 TFLOPS</strong> is computed as <code>2 × CUDA cores × boost clock (GHz)</code> for consumer cards (verified against several official NVIDIA figures where available, e.g. RTX 4090 = 82.6, RTX 2080 Ti = 13.4). Data-center cards (V100/A100/H100) use NVIDIA's directly published figures.</li>
+    <li><strong>B200 row is marked uncertain throughout</strong> — NVIDIA hasn't published an authoritative core/SM/cache breakdown, and third-party sources conflict (some report a 132-SM/50MB-L2/4.1TB/s config, others a 148-SM/96MB-L2/8TB/s config, possibly reflecting different B100/B200/B200A variants or memory configs). Treat this row as a placeholder pending an authoritative source.</li>
+    <li>All other figures are sourced from NVIDIA whitepapers, official spec/datasheet pages, and cross-checked GPU databases.</li>
+    <li>Registers per SM are 65,536 (32-bit) across every row in this table.</li>
+    <li>Max Threads/Block is 1,024 across every row in this table (omitted as a column since it never varies).</li>
+  </ul>
+  <h4>Compute capability legend</h4>
+  <table>
+    <tr><th>CC</th><th>Architecture family</th></tr>
+    <tr><td>3.0 / 3.5</td><td>Kepler</td></tr>
+    <tr><td>5.2</td><td>Maxwell</td></tr>
+    <tr><td>6.0 / 6.1</td><td>Pascal</td></tr>
+    <tr><td>7.0</td><td>Volta</td></tr>
+    <tr><td>7.5</td><td>Turing</td></tr>
+    <tr><td>8.0</td><td>Ampere (data center)</td></tr>
+    <tr><td>8.6</td><td>Ampere (consumer/professional)</td></tr>
+    <tr><td>8.9</td><td>Ada Lovelace</td></tr>
+    <tr><td>9.0</td><td>Hopper</td></tr>
+    <tr><td>10.0</td><td>Blackwell (data center)</td></tr>
+    <tr><td>12.0</td><td>Blackwell (consumer)</td></tr>
+  </table>
+`;
+
+const AMD_NOTES = `
+  <h4>Column mapping (NVIDIA → AMD)</h4>
+  <table>
+    <tr><th>NVIDIA concept</th><th>AMD analog</th><th>Notes</th></tr>
+    <tr><td>CUDA Cores</td><td>Stream Processors</td><td>Same idea — ALU count</td></tr>
+    <tr><td>SM</td><td>Compute Unit (CU)</td><td>RDNA 3/4 pair two CUs into a Workgroup Processor (WGP)</td></tr>
+    <tr><td>Compute Capability</td><td><code>gfx</code> ISA target</td><td>The actual ROCm/LLVM compilation target</td></tr>
+    <tr><td>Max Threads/SM</td><td>Max Threads/CU</td><td>Wavefront size × max resident wavefronts/CU</td></tr>
+    <tr><td>Max Blocks/SM</td><td><em>(omitted)</em></td><td>AMD has no published fixed ceiling on workgroups/CU</td></tr>
+    <tr><td>Max Shared Mem/SM</td><td>LDS/CU</td><td>Local Data Share</td></tr>
+  </table>
+  <h4>Notes</h4>
+  <ul>
+    <li><strong>Max Threads/CU</strong> = wavefront size (64 for GCN/CDNA; wave32 or wave64, selectable, for RDNA) × architectural max resident wavefronts/CU. GCN/CDNA1 hold 40 wavefronts/CU (4 SIMD16 × 10 wave slots); CDNA2 drops to 32 (4×8) per AMD's own ROCm docs. RDNA's WGP holds 4×20 wave32 slots = 80 wave32-equivalents per WGP, i.e. 1,280 per CU. Treat these as architectural ceilings, not typical achieved occupancy.</li>
+    <li><strong>LDS/CU</strong>: GCN/CDNA have a fixed 64 KB LDS per CU. RDNA's LDS is physically 128 KB per WGP (shared across its 2 CUs) — listed as such rather than divided in half, since a single workgroup can use the full 128 KB.</li>
+    <li><strong>CDNA "Peak FP32 (vector)"</strong> is explicitly labeled because AMD's data-center parts have separate, much higher "matrix FP32" figures on CDNA2 (e.g., MI250X: 47.9 TFLOPS vector vs 95.7 TFLOPS matrix). CDNA3 (MI300X) unified these into a single 163.4 TFLOPS figure per AMD's own datasheet.</li>
+    <li><strong>Instinct MI300X (CDNA 3) Max Threads/CU is marked uncertain (2,048*)</strong> — this carries over CDNA2's 32-waveslots/CU occupancy model, but AMD hasn't published CDNA3's waveslot count explicitly; some GFX9-family guides suggest CDNA3 may retain the 40-waveslots/CU (2,560) model used by GCN/CDNA1 instead.</li>
+    <li>RDNA4 TFLOPS/Mem Bandwidth/TDP figures (RX 9060 XT/9070/9070 XT) have been checked against AMD's official product pages; RX 9060 XT's TDP differs by memory configuration (150 W for 8GB, 160 W for 16GB).</li>
+    <li>All other figures are sourced from AMD's official product pages/datasheets (amd.com), AMD's ROCm GPU hardware specification docs, and cross-checked GPU databases.</li>
+  </ul>
+`;
+
+/* ============================= APP ============================= */
+
+const DATASETS = {
+  nvidia: { columns: NVIDIA_COLUMNS, data: NVIDIA_DATA, title: 'NVIDIA GPU Specifications', notes: NVIDIA_NOTES },
+  amd:    { columns: AMD_COLUMNS,    data: AMD_DATA,    title: 'AMD GPU Specifications',    notes: AMD_NOTES },
+};
+
+const state = { vendor: 'nvidia', sortCol: 0, sortDir: 1, query: '' };
+
+function numKey(str) {
+  if (str == null) return NaN;
+  const s = String(str).replace(/,/g, '');
+  const tb = s.match(/([\d.]+)\s*TB\/s/i);
+  if (tb) return parseFloat(tb[1]) * 1000;
+  const m = s.match(/-?\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : NaN;
+}
+
+function isUncertain(val) {
+  return /[~*]/.test(val);
+}
+
+function renderCell(val) {
+  if (isUncertain(val)) {
+    return `<span class="uncertain" title="Approximate / unverified value — see methodology notes below">${val}</span>`;
+  }
+  return val;
+}
+
+function buildHead(cols) {
+  const tr = document.createElement('tr');
+  cols.forEach((col, i) => {
+    const th = document.createElement('th');
+    th.dataset.index = i;
+    th.innerHTML = col.label + '<span class="arrow"></span>';
+    if (i === state.sortCol) {
+      th.classList.add('sorted');
+      th.querySelector('.arrow').textContent = state.sortDir === 1 ? '▲' : '▼';
+    }
+    th.addEventListener('click', () => onSort(i));
+    tr.appendChild(th);
+  });
+  const thead = document.getElementById('table-head');
+  thead.innerHTML = '';
+  thead.appendChild(tr);
+}
+
+function onSort(index) {
+  if (state.sortCol === index) {
+    state.sortDir *= -1;
+  } else {
+    state.sortCol = index;
+    state.sortDir = 1;
+  }
+  render();
+}
+
+function getFilteredSortedRows() {
+  const ds = DATASETS[state.vendor];
+  const q = state.query.trim().toLowerCase();
+  let rows = ds.data;
+  if (q) {
+    rows = rows.filter(row => row.some(cell => String(cell).toLowerCase().includes(q)));
+  }
+  const col = ds.columns[state.sortCol];
+  const idx = state.sortCol;
+  const dir = state.sortDir;
+  rows = rows.slice().sort((a, b) => {
+    if (col.type === 'num') {
+      const av = numKey(a[idx]), bv = numKey(b[idx]);
+      const aNaN = isNaN(av), bNaN = isNaN(bv);
+      if (aNaN && bNaN) return 0;
+      if (aNaN) return 1;
+      if (bNaN) return -1;
+      return (av - bv) * dir;
+    }
+    return String(a[idx]).localeCompare(String(b[idx])) * dir;
+  });
+  return rows;
+}
+
+function render() {
+  const ds = DATASETS[state.vendor];
+  document.getElementById('panel-title').textContent = ds.title;
+  buildHead(ds.columns);
+
+  const rows = getFilteredSortedRows();
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  if (rows.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = ds.columns.length;
+    td.className = 'no-results';
+    td.textContent = 'No cards match your search.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  } else {
+    rows.forEach(row => {
+      const tr = document.createElement('tr');
+      row.forEach((cell, i) => {
+        const td = document.createElement('td');
+        if (ds.columns[i].cls) td.className = ds.columns[i].cls;
+        td.innerHTML = renderCell(cell);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('panel-count').textContent =
+    `Showing ${rows.length} of ${ds.data.length} cards`;
+  document.getElementById('notes-body').innerHTML = ds.notes;
+
+  document.body.classList.toggle('vendor-amd', state.vendor === 'amd');
+  document.querySelectorAll('.vendor-tabs button').forEach(btn => {
+    const active = btn.dataset.vendor === state.vendor;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active);
+  });
+}
+
+document.querySelectorAll('.vendor-tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (state.vendor === btn.dataset.vendor) return;
+    state.vendor = btn.dataset.vendor;
+    state.sortCol = 0;
+    state.sortDir = 1;
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', (e) => {
+  state.query = e.target.value;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
